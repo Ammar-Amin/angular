@@ -1,0 +1,62 @@
+<h1 class="sr-only">Tasks</h1>
+
+@if (store.loading() && !store.loaded()) {
+  <app-loading-spinner label="Loading tasks…" />
+} @else if (store.error(); as message) {
+  <div class="rounded-lg border border-red-200 bg-red-50 p-5 text-center" role="alert">
+    <p class="text-red-900">{{ message }}</p>
+    <button
+      type="button"
+      class="mt-3 rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-700"
+      (click)="store.load(true)"
+    >
+      Try again
+    </button>
+  </div>
+} @else {
+  <div class="space-y-5">
+    <app-task-summary [stats]="store.stats()" />
+
+    <app-task-filter-bar [filters]="store.filters()" (changed)="store.setFilters($event)" />
+
+    @if (store.tasks().length === 0) {
+      <div class="rounded-lg border border-dashed border-slate-300 p-10 text-center">
+        <p class="font-medium text-slate-900">No tasks yet</p>
+        <p class="mt-1 text-sm text-slate-600">Create your first task to get started.</p>
+        <a
+          routerLink="/tasks/new"
+          class="mt-4 inline-block rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white"
+          >New task</a
+        >
+      </div>
+    } @else if (store.filteredTasks().length === 0) {
+      <div class="rounded-lg border border-dashed border-slate-300 p-10 text-center">
+        <p class="font-medium text-slate-900">No tasks match your filters</p>
+        <button
+          type="button"
+          class="mt-3 text-sm text-indigo-700 underline"
+          (click)="store.resetFilters()"
+        >
+          Clear filters
+        </button>
+      </div>
+    } @else {
+      <ul class="space-y-3">
+        @for (task of store.filteredTasks(); track task.id) {
+          <li><app-task-card [task]="task" (remove)="pendingDelete.set($event)" /></li>
+        }
+      </ul>
+    }
+  </div>
+}
+
+@if (pendingDelete(); as task) {
+  <app-confirm-dialog
+    title="Delete task?"
+    [message]="'“' + task.title + '” will be permanently deleted.'"
+    confirmLabel="Delete"
+    [busy]="store.saving()"
+    (confirmed)="confirmDelete()"
+    (cancelled)="pendingDelete.set(null)"
+  />
+}

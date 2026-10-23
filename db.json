@@ -1,0 +1,52 @@
+{
+  "tasks": [
+    {
+      "title": "Design task list page",
+      "description": "Filters, search and an empty state.",
+      "status": "in-progress",
+      "priority": "medium",
+      "dueDate": "2026-10-30",
+      "id": "2"
+    },
+    {
+      "id": "3",
+      "title": "Write unit tests for the store",
+      "description": "Cover load, create, update, delete and error paths.",
+      "status": "todo",
+      "priority": "high",
+      "dueDate": "2026-10-15"
+    },
+    {
+      "id": "4",
+      "title": "Review accessibility",
+      "description": "",
+      "status": "todo",
+      "priority": "low",
+      "dueDate": "2026-11-20"
+    },
+    {
+      "id": "5",
+      "title": "Fix date formatting bug",
+      "description": "Dates show off by one day in some timezones.",
+      "status": "in-progress",
+      "priority": "high",
+      "dueDate": "2026-10-20"
+    },
+    {
+      "id": "6",
+      "title": "Update dependencies",
+      "description": "Bump Angular and run the full test suite.",
+      "status": "completed",
+      "priority": "low",
+      "dueDate": "2026-10-22"
+    },
+    {
+      "title": "front end bug",
+      "description": "btn not working, when clicked it get's clicked don't know why?",
+      "status": "todo",
+      "priority": "medium",
+      "dueDate": "2026-09-24",
+      "id": "E5glHI9"
+    }
+  ]
+}

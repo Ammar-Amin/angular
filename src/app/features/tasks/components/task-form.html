@@ -1,0 +1,93 @@
+<form [formGroup]="form" (ngSubmit)="submit()" novalidate class="space-y-4">
+  <div>
+    <label for="title" class="mb-1 block text-sm font-medium text-slate-700">Title</label>
+    <input
+      id="title"
+      type="text"
+      formControlName="title"
+      class="w-full rounded-md border border-slate-300 px-3 py-2"
+      [attr.aria-invalid]="errorFor('title') ? 'true' : null"
+      [attr.aria-describedby]="errorFor('title') ? 'title-error' : null"
+    />
+    @if (errorFor('title'); as message) {
+      <p id="title-error" class="mt-1 text-sm text-red-700">{{ message }}</p>
+    }
+  </div>
+
+  <div>
+    <label for="description" class="mb-1 block text-sm font-medium text-slate-700">
+      Description
+    </label>
+    <textarea
+      id="description"
+      rows="3"
+      formControlName="description"
+      class="w-full rounded-md border border-slate-300 px-3 py-2"
+    ></textarea>
+  </div>
+
+  <div class="grid gap-4 sm:grid-cols-3">
+    <div>
+      <label for="status" class="mb-1 block text-sm font-medium text-slate-700">Status</label>
+      <select
+        id="status"
+        formControlName="status"
+        class="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+      >
+        @for (s of statuses; track s) {
+          <option [value]="s">{{ statusLabels[s] }}</option>
+        }
+      </select>
+      @if (errorFor('status'); as message) {
+        <p class="mt-1 text-sm text-red-700">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label for="priority" class="mb-1 block text-sm font-medium text-slate-700">Priority</label>
+      <select
+        id="priority"
+        formControlName="priority"
+        class="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
+      >
+        @for (p of priorities; track p) {
+          <option [value]="p">{{ priorityLabels[p] }}</option>
+        }
+      </select>
+      @if (errorFor('priority'); as message) {
+        <p class="mt-1 text-sm text-red-700">{{ message }}</p>
+      }
+    </div>
+
+    <div>
+      <label for="dueDate" class="mb-1 block text-sm font-medium text-slate-700">Due date</label>
+      <input
+        id="dueDate"
+        type="date"
+        formControlName="dueDate"
+        class="w-full rounded-md border border-slate-300 px-3 py-2"
+        [attr.aria-invalid]="errorFor('dueDate') ? 'true' : null"
+      />
+      @if (errorFor('dueDate'); as message) {
+        <p class="mt-1 text-sm text-red-700">{{ message }}</p>
+      }
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-2 pt-2">
+    <button
+      type="button"
+      class="rounded-md border border-slate-300 px-4 py-2 text-sm hover:bg-slate-50"
+      (click)="cancelled.emit()"
+    >
+      Cancel
+    </button>
+    <button
+      type="submit"
+      class="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+      [disabled]="saving()"
+    >
+      {{ saving() ? 'Saving…' : task() ? 'Save changes' : 'Create task' }}
+    </button>
+  </div>
+</form>
