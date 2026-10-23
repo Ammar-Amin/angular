@@ -1,12 +1,4 @@
-import {
-  ChangeDetectionStrategy,
-  Component,
-  DestroyRef,
-  computed,
-  inject,
-  input,
-} from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, computed, inject, input } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import { TaskInput } from '../../../core/models/task.model';
 import { LoadingSpinner } from '../../../shared/components/loading-spinner';
@@ -23,7 +15,6 @@ import { TasksStore } from '../state/tasks.store';
 export class TaskFormPage {
   protected readonly store = inject(TasksStore);
   private readonly router = inject(Router);
-  private readonly destroyRef = inject(DestroyRef);
 
   readonly id = input<string>();
 
@@ -38,13 +29,14 @@ export class TaskFormPage {
 
   constructor() {
     // Opening /tasks/:id/edit directly means nothing has been loaded yet.
-    this.store.load();
+    void this.store.load();
   }
 
-  protected save(input: TaskInput): void {
+  protected async save(input: TaskInput): Promise<void> {
     const id = this.id();
-    const request = id === undefined ? this.store.create(input) : this.store.update(id, input);
-    request.pipe(takeUntilDestroyed(this.destroyRef)).subscribe(() => this.goBack());
+    const saved =
+      id === undefined ? await this.store.create(input) : await this.store.update(id, input);
+    if (saved) this.goBack();
   }
 
   protected goBack(): void {

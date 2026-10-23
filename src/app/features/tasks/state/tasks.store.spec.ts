@@ -38,57 +38,63 @@ describe('TasksStore', () => {
 
   afterEach(() => http.verify());
 
-  function seed(tasks: Task[]): void {
-    store.load();
+  async function seed(tasks: Task[]): Promise<void> {
+    const loading = store.load();
     http.expectOne(TASKS_URL).flush(tasks);
+    await loading;
   }
 
   describe('loading', () => {
-    it('is loading until the request resolves, then holds the tasks', () => {
-      store.load();
+    it('is loading until the request resolves, then holds the tasks', async () => {
+      const loading = store.load();
       expect(store.loading()).toBe(true);
 
       http.expectOne(TASKS_URL).flush([task()]);
+      await loading;
 
       expect(store.loading()).toBe(false);
       expect(store.tasks()).toHaveLength(1);
       expect(store.error()).toBeNull();
     });
 
-    it('does not refetch once loaded unless forced', () => {
-      seed([task()]);
-      store.load();
+    it('does not refetch once loaded unless forced', async () => {
+      await seed([task()]);
+      await store.load();
       http.expectNone(TASKS_URL);
 
-      store.load(true);
+      const reload = store.load(true);
       http.expectOne(TASKS_URL).flush([]);
+      await reload;
       expect(store.tasks()).toEqual([]);
     });
 
-    it('exposes a friendly error when the API is unreachable', () => {
-      store.load();
+    it('exposes a friendly error when the API is unreachable', async () => {
+      const loading = store.load();
       http.expectOne(TASKS_URL).error(new ProgressEvent('error'), { status: 0 });
+      await loading;
 
       expect(store.loading()).toBe(false);
       expect(store.error()).toContain('Could not reach the server');
       expect(store.tasks()).toEqual([]);
     });
 
-    it('exposes a friendly error on a 500 and allows a retry', () => {
-      store.load();
+    it('exposes a friendly error on a 500 and allows a retry', async () => {
+      const first = store.load();
       http.expectOne(TASKS_URL).flush('boom', { status: 500, statusText: 'Server Error' });
+      await first;
       expect(store.error()).toContain('server ran into a problem');
 
-      store.load(true);
+      const retry = store.load(true);
       expect(store.error()).toBeNull();
       http.expectOne(TASKS_URL).flush([task()]);
+      await retry;
       expect(store.tasks()).toHaveLength(1);
     });
   });
 
   describe('derived state', () => {
-    beforeEach(() => {
-      seed([
+    beforeEach(async () => {
+      await seed([
         task({ id: '1', title: 'Alpha', status: 'completed', dueDate: daysFromToday(-3) }),
         task({ id: '2', title: 'Beta', status: 'in-progress', dueDate: daysFromToday(-1) }),
         task({
@@ -137,29 +143,29 @@ describe('TasksStore', () => {
       dueDate: daysFromToday(1),
     };
 
-    it('create adds the saved task, notifies and updates the stats', () => {
-      seed([task()]);
-      let emitted: Task | undefined;
-      store.create(input).subscribe((t) => (emitted = t));
+    it('create adds the saved task, notifies and updates the stats', async () => {
+      await seed([task()]);
+      const result = store.create(input);
       expect(store.saving()).toBe(true);
 
       http.expectOne({ method: 'POST', url: TASKS_URL }).flush({ ...input, id: '99' });
 
-      expect(emitted?.id).toBe('99');
+      expect(await result).toBe(true);
       expect(store.tasks().map((t) => t.id)).toEqual(['1', '99']);
       expect(store.stats().total).toBe(2);
       expect(store.saving()).toBe(false);
       expect(notify.items()[0]).toMatchObject({ kind: 'success', text: 'Task created.' });
     });
 
-    it('update replaces only the matching task without mutating the old array', () => {
-      seed([task({ id: '1' }), task({ id: '2', title: 'Other' })]);
+    it('update replaces only the matching task without mutating the old array', async () => {
+      await seed([task({ id: '1' }), task({ id: '2', title: 'Other' })]);
       const before = store.tasks();
 
-      store.update('1', { ...input, status: 'completed' }).subscribe();
+      const result = store.update('1', { ...input, status: 'completed' });
       http
         .expectOne({ method: 'PUT', url: `${TASKS_URL}/1` })
         .flush({ ...input, id: '1', status: 'completed' });
+      await result;
 
       expect(store.tasks()).not.toBe(before);
       expect(before[0].status).toBe('todo');
@@ -167,20 +173,20 @@ describe('TasksStore', () => {
       expect(store.tasks()[1].title).toBe('Other');
     });
 
-    it('delete removes the task', () => {
-      seed([task({ id: '1' }), task({ id: '2' })]);
-      store.delete('1').subscribe();
+    it('delete removes the task', async () => {
+      await seed([task({ id: '1' }), task({ id: '2' })]);
+      const result = store.delete('1');
       http.expectOne({ method: 'DELETE', url: `${TASKS_URL}/1` }).flush({});
+      await result;
       expect(store.tasks().map((t) => t.id)).toEqual(['2']);
     });
 
-    it('keeps state unchanged and reports an error when a write fails', () => {
-      seed([task({ id: '1' })]);
-      let emitted = false;
-      store.delete('1').subscribe(() => (emitted = true));
+    it('keeps state unchanged and reports an error when a write fails', async () => {
+      await seed([task({ id: '1' })]);
+      const result = store.delete('1');
       http.expectOne(`${TASKS_URL}/1`).flush('nope', { status: 500, statusText: 'Server Error' });
 
-      expect(emitted).toBe(false);
+      expect(await result).toBe(false);
       expect(store.tasks()).toHaveLength(1);
       expect(store.saving()).toBe(false);
       expect(notify.items()[0]).toMatchObject({ kind: 'error' });

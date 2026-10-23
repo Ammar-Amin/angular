@@ -1,5 +1,4 @@
-import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
-import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ChangeDetectionStrategy, Component, inject, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { Task } from '../../../core/models/task.model';
 import { ConfirmDialog } from '../../../shared/components/confirm-dialog';
@@ -17,20 +16,17 @@ import { TasksStore } from '../state/tasks.store';
 })
 export class TaskListPage {
   protected readonly store = inject(TasksStore);
-  private readonly destroyRef = inject(DestroyRef);
 
   protected readonly pendingDelete = signal<Task | null>(null);
 
   constructor() {
-    this.store.load();
+    void this.store.load();
   }
 
-  protected confirmDelete(): void {
+  protected async confirmDelete(): Promise<void> {
     const task = this.pendingDelete();
-    if (!task) return;
-    this.store
-      .delete(task.id)
-      .pipe(takeUntilDestroyed(this.destroyRef))
-      .subscribe(() => this.pendingDelete.set(null));
+    if (task && (await this.store.delete(task.id))) {
+      this.pendingDelete.set(null);
+    }
   }
 }

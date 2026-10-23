@@ -30,12 +30,11 @@ import {
         <span class="mb-1 block text-slate-600">Status</span>
         <select
           class="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-          [value]="filters().status"
           (change)="onStatus($event)"
         >
-          <option value="all">All statuses</option>
+          <option value="all" [selected]="filters().status === 'all'">All statuses</option>
           @for (s of statuses; track s) {
-            <option [value]="s">{{ statusLabels[s] }}</option>
+            <option [value]="s" [selected]="filters().status === s">{{ statusLabels[s] }}</option>
           }
         </select>
       </label>
@@ -44,12 +43,13 @@ import {
         <span class="mb-1 block text-slate-600">Priority</span>
         <select
           class="w-full rounded-md border border-slate-300 bg-white px-3 py-2"
-          [value]="filters().priority"
           (change)="onPriority($event)"
         >
-          <option value="all">All priorities</option>
+          <option value="all" [selected]="filters().priority === 'all'">All priorities</option>
           @for (p of priorities; track p) {
-            <option [value]="p">{{ priorityLabels[p] }}</option>
+            <option [value]="p" [selected]="filters().priority === p">
+              {{ priorityLabels[p] }}
+            </option>
           }
         </select>
       </label>

@@ -57,6 +57,8 @@ JSON Server  <->  TasksApiService (HttpClient)  <->  TasksStore (signals)  ->  p
 4. Write calls hit the API first, and the store only updates its state after the server confirms.
    On success the store replaces its array (never mutates it) and shows a success toast. On failure it shows an
    error toast and leaves state untouched.
+5. `create`, `update` and `delete` are `async` and resolve to `true` or `false`, so a page can simply
+   `await` them and then navigate or close a dialog. No component subscribes to anything.
 
 ## README questions
 
@@ -64,8 +66,9 @@ JSON Server  <->  TasksApiService (HttpClient)  <->  TasksStore (signals)  ->  p
 The state here is small and synchronous apart from the HTTP calls, so Signals fit well. `computed()` gives
 derived state (filtered list, stats) that updates automatically and is only recalculated when its inputs change,
 and templates read signals directly with no `async` pipe or subscriptions to manage. NgRx would add actions,
-reducers and effects that this size of app doesn't need. RxJS is still used where it is the better fit: the HTTP
-calls and the observable returned from write operations.
+reducers and effects that this size of app doesn't need. RxJS is limited to the HTTP layer: `TasksApiService`
+returns observables (the normal `HttpClient` shape) and the store converts each call to a promise with
+`firstValueFrom`, so nothing outside the store has to subscribe or unsubscribe.
 
 **2. How is data passed between the API, state layer and components?**
 See "How data flows" above. Components never touch `HttpClient`. The store is the only thing that
@@ -78,7 +81,8 @@ talks to the API service and is the only owner of task state.
   but the UI waits for the API.
 - Filtering is client-side, and the store loads every task in one request.
 - The confirm dialog is a simple overlay. It handles Escape and has dialog roles, but it does not trap focus.
-- Filter state lives in the store, not the URL, so filters are lost on refresh and can't be linked to.
+- Filter state lives in the store, not the URL. It survives navigating to the form and back, but is lost on
+  refresh and can't be linked to.
 - No end-to-end tests and no pagination.
 - I removed the SSR/prerender setup the Angular CLI generated, since there is no benefit for this app and
   it complicates talking to a separate API.
@@ -87,7 +91,9 @@ talks to the API service and is the only owner of task state.
 
 - A real backend with authentication, validation, and server-side ids/timestamps. JSON Server accepts anything.
 - Move the API URL into environment config instead of a constant.
-- Optimistic updates with rollback, and request cancellation/retry for flaky networks.
+- Optimistic updates with rollback, and request cancellation/retry for flaky networks. Promises are simple but
+  can't be cancelled, so I'd move search to an observable pipeline (`debounceTime` + `switchMap`) once it hits
+  the server.
 - Keep filters and page in query params.
 - Proper focus trap in the dialog (or the native `<dialog>`), a wider accessibility pass, and e2e tests (Playwright).
 - Handle concurrent edits (e.g. ETag/version check) so one user doesn't overwrite another.

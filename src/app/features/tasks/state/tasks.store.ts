@@ -1,5 +1,5 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
-import { EMPTY, Observable, catchError, defer, finalize, map, tap } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import {
   DEFAULT_FILTERS,
   Task,
@@ -74,64 +74,56 @@ export class TasksStore {
   }
 
   /** Fetches tasks. Pass force to refetch even if they have been loaded already. */
-  load(force = false): void {
+  async load(force = false): Promise<void> {
     if (this._loading() || (this._loaded() && !force)) return;
 
     this._loading.set(true);
     this._error.set(null);
-    this.api
-      .getAll()
-      .pipe(finalize(() => this._loading.set(false)))
-      .subscribe({
-        next: (tasks) => {
-          this._tasks.set(tasks);
-          this._loaded.set(true);
-        },
-        error: (err) => this._error.set(toUserMessage(err, 'load your tasks')),
-      });
+    try {
+      this._tasks.set(await firstValueFrom(this.api.getAll()));
+      this._loaded.set(true);
+    } catch (err) {
+      this._error.set(toUserMessage(err, 'load your tasks'));
+    } finally {
+      this._loading.set(false);
+    }
   }
 
-  /**
-   * Write operations return an observable that emits once on success, so callers can
-   * navigate afterwards. On failure the store reports the error itself and emits nothing.
-   */
-  create(input: TaskInput): Observable<Task> {
+  /** Write methods resolve to true on success, false on failure (the error toast is shown here). */
+  create(input: TaskInput): Promise<boolean> {
     return this.write(this.api.create(input), 'create the task', 'Task created.', (saved) =>
       this._tasks.update((tasks) => [...tasks, saved]),
     );
   }
 
-  update(id: string, input: TaskInput): Observable<Task> {
+  update(id: string, input: TaskInput): Promise<boolean> {
     return this.write(this.api.update(id, input), 'update the task', 'Task updated.', (saved) =>
       this._tasks.update((tasks) => tasks.map((t) => (t.id === id ? saved : t))),
     );
   }
 
-  delete(id: string): Observable<void> {
+  delete(id: string): Promise<boolean> {
     return this.write(this.api.delete(id), 'delete the task', 'Task deleted.', () =>
       this._tasks.update((tasks) => tasks.filter((t) => t.id !== id)),
-    ).pipe(map(() => undefined));
+    );
   }
 
-  private write<T>(
+  private async write<T>(
     request: Observable<T>,
     action: string,
     successMessage: string,
     applyToState: (result: T) => void,
-  ): Observable<T> {
-    return defer(() => {
-      this._saving.set(true);
-      return request.pipe(
-        tap((result) => {
-          applyToState(result);
-          this.notify.success(successMessage);
-        }),
-        catchError((err) => {
-          this.notify.error(toUserMessage(err, action));
-          return EMPTY;
-        }),
-        finalize(() => this._saving.set(false)),
-      );
-    });
+  ): Promise<boolean> {
+    this._saving.set(true);
+    try {
+      applyToState(await firstValueFrom(request));
+      this.notify.success(successMessage);
+      return true;
+    } catch (err) {
+      this.notify.error(toUserMessage(err, action));
+      return false;
+    } finally {
+      this._saving.set(false);
+    }
   }
 }

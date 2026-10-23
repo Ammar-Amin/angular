@@ -40,21 +40,27 @@ describe('TaskListPage', () => {
   const titles = (): string[] =>
     Array.from(root().querySelectorAll('app-task-card h3')).map((h) => h.textContent!.trim());
 
+  /** The store resolves its promises on a microtask, so let those run before rendering. */
+  async function settle(): Promise<void> {
+    await new Promise((resolve) => setTimeout(resolve));
+    await fixture.whenStable();
+  }
+
   async function render(): Promise<void> {
     fixture = TestBed.createComponent(TaskListPage);
-    await fixture.whenStable();
+    await settle();
   }
 
   async function flushTasks(tasks: Task[] = TASKS): Promise<void> {
     http.expectOne(TASKS_URL).flush(tasks);
-    await fixture.whenStable();
+    await settle();
   }
 
   async function typeIn(selector: string, value: string, eventName: string): Promise<void> {
     const input = root().querySelector<HTMLInputElement | HTMLSelectElement>(selector)!;
     input.value = value;
     input.dispatchEvent(new Event(eventName));
-    await fixture.whenStable();
+    await settle();
   }
 
   const clickButton = async (label: string): Promise<void> => {
@@ -62,7 +68,7 @@ describe('TaskListPage', () => {
       (b) => b.textContent?.trim() === label,
     );
     button!.click();
-    await fixture.whenStable();
+    await settle();
   };
 
   beforeEach(() => {
@@ -131,7 +137,7 @@ describe('TaskListPage', () => {
   it('shows an error with a working retry when loading fails', async () => {
     await render();
     http.expectOne(TASKS_URL).error(new ProgressEvent('error'), { status: 0 });
-    await fixture.whenStable();
+    await settle();
 
     expect(text()).toContain('Could not reach the server');
 
@@ -166,7 +172,7 @@ describe('TaskListPage', () => {
       ) as HTMLButtonElement;
       confirm.click();
       http.expectOne({ method: 'DELETE', url: `${TASKS_URL}/1` }).flush({});
-      await fixture.whenStable();
+      await settle();
 
       expect(titles()).toEqual(['Plan sprint', 'Ship release']);
       expect(text()).not.toContain('Delete task?');
@@ -183,7 +189,7 @@ describe('TaskListPage', () => {
       ) as HTMLButtonElement;
       confirm.click();
       http.expectOne(`${TASKS_URL}/1`).flush('fail', { status: 500, statusText: 'Server Error' });
-      await fixture.whenStable();
+      await settle();
 
       expect(titles()).toHaveLength(3);
       expect(text()).toContain('Delete task?');
